@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Bird</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #70c5ce;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+        canvas {
+            background-color: #fff;
+            border: 1px solid #000;
+        }
+        #leaderboard {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #fff;
+            border: 1px solid #000;
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h2 id="scoreDisplay" style="position: absolute; top: 10px; left: 10px;">Skor: 0</h2>
+    <canvas id="gameCanvas" width="400" height="600"></canvas>
+    <div id="leaderboard">
+        <h2>Liderlik Tablosu</h2>
+        <ol id="leaderboardList"></ol>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const context = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const leaderboardList = document.getElementById('leaderboardList');
+
+        let highScore = localStorage.getItem('highScore') || 0;
+        // highScoreDisplay.textContent = `En Yüksek Skor: ${highScore}`;
+
+        let userScore = 0; // Kullanıcının mevcut skoru
+        let currentUser = localStorage.getItem('currentUser') || ''; // Kaydedilen kullanıcı adı
+        let currentHighScore = localStorage.getItem('currentHighScore') || 0; // Kullanıcının mevcut en yüksek skoru
+        let leaderboardData = []; // Liderlik tablosu verisi
+
+        const bird = {
+            x: 50,
+            y: 150,
+            width: 20,
+            height: 20,
+            gravity: 0.5,
+            lift: -10,
+            velocity: 0,
+            score: 0,
+            jumpCooldown: 0,
+            draw() {
+                context.fillStyle = 'yellow';
+                context.fillRect(this.x, this.y, this.width, this.height);
+            },
+            update() {
+                this.velocity += this.gravity;
+                this.y += this.velocity;
+
+                if (this.y + this.height > canvas.height || this.y < 0) {
+                    gameOver();
+                }
+
+                pipes.forEach(pipe => {
+                    if (this.x === pipe.x + pipeWidth) {
+                        this.score++;
+                        scoreDisplay.textContent = `Skor: ${this.score}`;
+
+                        // Mevcut kullanıcının skoru en yüksek skoru geçerse güncelle
+                        if (this.score > currentHighScore) {
+                            currentHighScore = this.score;
+                            localStorage.setItem('currentHighScore', currentHighScore);
+                        }
+                    }
+                });
+
+                if (this.jumpCooldown > 0) {
+                    this.jumpCooldown--;
+                }
+            },
+            up() {
+                if (this.jumpCooldown === 0) {
+                    this.velocity = this.lift;
+                    this.jumpCooldown = 10;
+                }
+            }
+        };
+
+        const pipes = [];
+        const pipeWidth = 20;
+        const pipeGap = 250;
+        let frameCount = 0;
+
+        function drawPipe(pipe) {
+            context.fillStyle = 'green';
+            context.fillRect(pipe.x, 0, pipeWidth, pipe.top);
+            context.fillRect(pipe.x, canvas.height - pipe.bottom, pipeWidth, pipe.bottom);
+        }
+
+        function updatePipes() {
+            if (frameCount % 90 === 0) {
+                const top = Math.random() * (canvas.height / 2);
+                const bottom = canvas.height - top - pipeGap;
+                pipes.push({ x: canvas.width, top: top, bottom: bottom });
+            }
+
+            pipes.forEach((pipe, index) => {
+                pipe.x -= 2;
+
+                if (pipe.x + pipeWidth < 0) {
+                    pipes.splice(index, 1);
+                }
+
+                if (bird.x < pipe.x + pipeWidth && bird.x + bird.width > pipe.x &&
+                    (bird.y < pipe.top || bird.y + bird.height > canvas.height - pipe.bottom)) {
+                    gameOver();
+                }
+
+                drawPipe(pipe);
+            });
+        }
+
+        function update() {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+
+            bird.update();
+            bird.draw();
+
+            updatePipes();
+
+            frameCount++;
+            requestAnimationFrame(update);
+        }
+
+        function gameOver() {
+            pipes.length = 0;
+            bird.y = canvas.height / 2 - bird.height / 2;
+            bird.velocity = 0;
+            bird.score = 0;
+            scoreDisplay.textContent = `Skor: ${bird.score}`;
+
+            if (currentUser !== '') {
+                // Eğer mevcut kullanıcı varsa ve mevcut skoru en yüksek skoru geçerse güncelle
+                if (userScore > currentHighScore) {
+                    currentHighScore = userScore;
+                    localStorage.setItem('currentHighScore', currentHighScore);
+                }
+            } else {
+                // Eğer mevcut kullanıcı yoksa, kullanıcı adı iste ve skoru kaydet
+                const username = prompt("İsminizi giriniz:");
+                if (username) {
+                    currentUser = username;
+                    localStorage.setItem('currentUser', currentUser);
+                    currentHighScore = userScore;
+                    localStorage.setItem('currentHighScore', currentHighScore);
+                }
+            }
+
+            // Kullanıcı adı ve skoru liderlik tablosuna ekle
+            leaderboardData.push({ username: currentUser, score: currentHighScore });
+
+            // Liderlik tablosunu güncelle ve sakla
+            updateLeaderboard();
+            localStorage.setItem('leaderboardData3', JSON.stringify(leaderboardData));
+        }
+
+        function updateLeaderboard() {
+            // Liderlik tablosunu yükle veya oluştur
+            const storedData = localStorage.getItem('leaderboardData3');
+            if (storedData) {
+                leaderboardData = JSON.parse(storedData);
+            }
+
+            // Kullanıcı adına göre liderlik tablosunu güncelle
+            let currentUserIndex = -1;
+            leaderboardData.forEach((entry, index) => {
+                if (entry.username === currentUser) {
+                    currentUserIndex = index;
+                }
+            });
+
+            if (currentUserIndex !== -1) {
+                leaderboardData[currentUserIndex].score = currentHighScore;
+            } else {
+                leaderboardData.push({ username: currentUser,
+                    score: currentHighScore });
+            }
+
+            // Liderlik tablosunu sırala
+            leaderboardData.sort((a, b) => b.score - a.score);
+
+            // Liderlik tablosunu HTML'e ekle
+            leaderboardList.innerHTML = '';
+            leaderboardData.slice(0, 20).forEach((entry, index) => {
+                const listItem = document.createElement('li');
+                listItem.textContent = `${index + 1}. ${entry.username}: ${entry.score}`;
+                leaderboardList.appendChild(listItem);
+            });
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                bird.up();
+            }
+        });
+
+        // Mobil kullanıcılar için ekran dokunma olayını dinleyerek kuşun zıplamasını sağla
+        document.addEventListener('touchstart', () => {
+            bird.up();
+        });
+
+        update();
+    </script>
+</body>
+</html>
