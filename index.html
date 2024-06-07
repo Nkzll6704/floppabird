@@ -175,7 +175,8 @@
             localStorage.setItem('leaderboardData3', JSON.stringify(leaderboardData));
         }
 
-        function updateLeaderboard() {
+        // Küresel olarak `updateLeaderboard` fonksiyonunu tanımla
+        window.updateLeaderboard = function() {
             // Liderlik tablosunu yükle veya oluştur
             const storedData = localStorage.getItem('leaderboardData3');
             if (storedData) {
@@ -190,11 +191,10 @@
                 }
             });
 
-            if (currentUserIndex !== -1) {
+                        if (currentUserIndex !== -1) {
                 leaderboardData[currentUserIndex].score = currentHighScore;
             } else {
-                leaderboardData.push({ username: currentUser,
-                    score: currentHighScore });
+                leaderboardData.push({ username: currentUser, score: currentHighScore });
             }
 
             // Liderlik tablosunu sırala
@@ -207,7 +207,7 @@
                 listItem.textContent = `${index + 1}. ${entry.username}: ${entry.score}`;
                 leaderboardList.appendChild(listItem);
             });
-        }
+        };
 
         document.addEventListener('keydown', (e) => {
             if (e.code === 'Space') {
@@ -224,3 +224,4 @@
     </script>
 </body>
 </html>
+
